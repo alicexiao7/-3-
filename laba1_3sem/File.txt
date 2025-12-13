@@ -1,0 +1,106 @@
+#include <iostream>
+#include "ATC.h"
+#include <algorithm>
+#include <cctype>
+#include <string>
+
+// Небольшие функции ввода (без излишней сложности)
+static std::string readLineTrim(const std::string& prompt) {
+    std::string s;
+    while (true) {
+        std::cout << prompt;
+        std::getline(std::cin, s);
+        // trim
+        const auto start = s.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos) { std::cout << "Ошибка: ввод не может быть пустым\n"; continue; }
+        const auto end = s.find_last_not_of(" \t\r\n");
+        return s.substr(start, end - start + 1);
+    }
+}
+
+static int readPositiveInt(const std::string& prompt) {
+    while (true) {
+        std::string s = readLineTrim(prompt);
+        if (!std::all_of(s.begin(), s.end(), [](char c){ return std::isdigit(static_cast<unsigned char>(c)); })) {
+            std::cout << "Ошибка: введите положительное целое число\n";
+            continue;
+        }
+        try {
+            long long v = std::stoll(s);
+            if (v < 0 || v > 1000000000LL) { std::cout << "Ошибка: число вне допустимого диапазона\n"; continue; }
+            return static_cast<int>(v);
+        } catch (...) {
+            std::cout << "Ошибка: некорректное число\n";
+        }
+    }
+}
+
+static double readPositiveDouble(const std::string& prompt) {
+    while (true) {
+        std::string s = readLineTrim(prompt);
+        std::replace(s.begin(), s.end(), ',', '.');
+        bool ok = !s.empty();
+        int dots = 0;
+        for (char c : s) {
+            if (c == '.') { if (++dots > 1) { ok = false; break; } }
+            else if (!std::isdigit(static_cast<unsigned char>(c))) { ok = false; break; }
+        }
+        if (!ok) { std::cout << "Ошибка: введите положительное число (например, 123.45)\n"; continue; }
+        try {
+            double v = std::stod(s);
+            if (!(v > 0.0)) { std::cout << "Ошибка: число должно быть положительным\n"; continue; }
+            return v;
+        } catch (...) {
+            std::cout << "Ошибка: некорректное число\n";
+        }
+    }
+}
+
+void showMenu() {
+    std::cout << "\n=== МЕНЮ (АТС) ===\n";
+    std::cout << "1. Ввести данные АТС\n";
+    std::cout << "2. Показать сводку\n";
+    std::cout << "3. Вычислить общую абонплату\n";
+    std::cout << "4. Выход\n";
+}
+
+int main() {
+    ATC atc;
+    bool hasData = false;
+
+    std::cout << "Программа: Управление АТС (вариант 1)\n";
+
+    while (true) {
+        showMenu();
+        int choice = readPositiveInt("Выберите действие (1-4): ");
+        try {
+            if (choice == 1) {
+                std::string addr = readLineTrim("Введите адрес АТС: ");
+                double fee = readPositiveDouble("Введите абонентскую плату (руб): ");
+                int subs = readPositiveInt("Введите число абонентов: ");
+                atc.setAddress(addr);                 // write-only
+                atc.setSubscriptionFee(fee);          // write-only
+                atc.setNumberOfSubscribers(subs);     // write-only
+                hasData = true;
+                std::cout << "Данные сохранены.\n";
+            } else if (choice == 2) {
+                if (!hasData) { std::cout << "Сначала введите данные (пункт 1).\n"; continue; }
+                atc.printSummary();
+            } else if (choice == 3) {
+                if (!hasData) { std::cout << "Сначала введите данные (пункт 1).\n"; continue; }
+                double total = atc.calculateTotalSubscription();
+                std::cout << "Общая абонентская плата: " << std::fixed << std::setprecision(2)
+                          << total << " руб.\n";
+            } else if (choice == 4) {
+                std::cout << "Выход...\n";
+                break;
+            } else {
+                std::cout << "Неверный пункт меню\n";
+            }
+        } catch (const std::exception& ex) {
+            std::cout << "Ошибка: " << ex.what() << "\n";
+        }
+    }
+
+    return 0;
+}
